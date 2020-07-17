@@ -1,0 +1,11 @@
+<h1>Users#index</h1>
+
+<% @users.each do |user| %>
+  <div>
+    <p><%= "Name : #{user.name}" %></p>
+    <p><%= "Email : #{user.email}" %></p>
+    <% user.tags.each do |tag| %>
+      <p><%= tag.name %></p>
+    <% end %>
+  </div>
+<% end %>

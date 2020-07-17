@@ -1,0 +1,98 @@
+rails new . -d postgresql --skip-bundle --skip-turbolinks --skip-test
+
+vim Gemfile
+gem 'devise'
+
+bin/bundle install
+bin/rails g devise:install
+
+vim config/environments/development.rb
+config.action_mailer.default_url_options = { host: 'localhost', port: 3000 }
+
+bin/rails g controller Users index show
+
+vim config/routes.rb
+root 'users#index'
+
+vim app/views/layouts/application.html.erb
+<p class="notice"><%= notice %></p>
+<p class="alert"><%= alert %></p>
+
+bin/rails g devise:views
+bin/rails g devise User
+bin/rails g migration add_name_to_users name:string
+bin/rails g model tag
+bin/rails g model user_tag_relation
+
+vim db/migrate/20????????????_create_tags.rb
+  t.string :name, null: false, unique: true
+
+  t.timestamps
+
+vim db/migrate/20????????????_create_user_tag_relations.rb
+  t.references :user, foreign_key: true
+  t.references :tag, foreign_key: true
+
+  t.timestamps
+
+vim app/models/user
+validates :name, { presence: true }
+validates :email, { presence: true, uniqueness: true }
+
+has_many :user_tag_relations, dependent: :delete_all
+has_many :tags, through: :user_tag_relations
+
+vim app/models/tag.rb
+validates :name, { presence: true, uniqueness: true }
+
+has_many :user_tag_relations, dependent: :delete_all
+has_many :users, through: :user_tag_relations
+
+vim app/models/user_tag_relation.rb
+belongs_to :user
+belongs_to :tag
+
+vim app/controllers/application_controller.rb
+  before_action :configure_permitted_parameters, if: :devise_controller?
+
+  protected
+
+  def configure_permitted_parameters
+    devise_parameter_sanitizer.permit(:sign_up, keys: [ :name ])
+    devise_parameter_sanitizer.permit(:sign_in, keys: [ :name ])
+    devise_parameter_sanitizer.permit(:account_update, keys: [ :name, tag_ids: [] ])
+  end
+
+vim config/initializers/devise.rb
+config.scoped_views = true
+
+vim app/views/devise/registrations/new.html.erb
+  <div class="field">
+    <%= f.label :name %>
+    <%= f.text_field :name %>
+  </div>
+
+vim app/views/devise/registrations/edit.html.erb
+  <div class="field">
+    <%= f.label :name %>
+    <%= f.text_field :name %>
+  </div>
+
+  <div class="field">
+    <%= f.label :tag_ids, "Tags you want follow" %>
+    <%= f.collection_check_boxes :tag_ids, Tag.all, :id, :name do |tag| %>
+      <div class="form-check">
+        <%= tag.label class: "form-check-label" do %>
+          <%= tag.check_box class: "form-check-input" %>
+        <%= tag.text %>
+        <% end %>
+      </div>
+    <% end %>
+  </div>
+
+vim db/seeds.rb
+Tag.create(name: 'Ruby')
+
+bin/rails db:create
+bin/rails db:migrate
+bin/rails db:seed
